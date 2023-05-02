@@ -34,6 +34,8 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
+        	DataOutputStream dos = new DataOutputStream(out);
+        	
         	BufferedReader br = new BufferedReader(new InputStreamReader(in));
         	
         	String line = br.readLine();
@@ -62,8 +64,8 @@ public class RequestHandler extends Thread {
         		}
         		// "POST방식 회원가입"에 사용 end------------------------------------------
         		
-//        		System.out.println(line);
-        		line = br.readLine();	// 수신 받은 데이터를 읽으며 커서를 옮기는 역할을 한다.
+        		System.out.println(line);	// 실제로 출력을 한다.
+        		line = br.readLine();		// 수신 받은 데이터를 읽으며 커서를 옮기는 역할을 한다.
         	}
         	System.out.println("-------------------------------------HTTP 요청 정보 전체 출력 end---------------------------------------");
         	
@@ -90,6 +92,7 @@ public class RequestHandler extends Thread {
         	// if문 3번째 방법 start--------------------------------------------------------
 	        if(!url.contains("?") && (method != null && !method.equals("POST"))) {
 	        	body = Files.readAllBytes(new File("./webapp" + url).toPath());
+	        	response200Header(dos, body.length);	// "POST방식 회원가입"에서 response302Header를 사용하면서 옮김.
         	}
         	// if문 3번째 방법 end----------------------------------------------------------
 //        	System.out.println("---------------------------------------index.html로 이동 end---------------------------------------");
@@ -117,7 +120,7 @@ public class RequestHandler extends Thread {
 //        	System.out.println("----------------------------------------GET방식 회원가입 end----------------------------------------");
         	
         	
-        	System.out.println("---------------------------------------POST방식 회원가입 start---------------------------------------");
+//        	System.out.println("---------------------------------------POST방식 회원가입 start---------------------------------------");
         	if(method != null && method.equals("POST")) {
         		// body 내용 읽기 1번 방법 start---------------------------------
 //        		String queryString = br.readLine();
@@ -128,10 +131,10 @@ public class RequestHandler extends Thread {
         		// readData는 read()를 사용한다. read()와 readLine()의 차이를 알 것.
         		String queryString = IOUtils.readData(br, contentLength);
 				// body 내용 읽기 2번 방법 end-----------------------------------
-        		System.out.println("queryString       :: " + queryString);
+//        		System.out.println("queryString       :: " + queryString);
 				
 				String decodeQueryString = URLDecoder.decode(queryString, "UTF-8");
-				System.out.println("decodeQueryString :: " + decodeQueryString);
+//				System.out.println("decodeQueryString :: " + decodeQueryString);
 				
 				Map<String, String> pqs = HttpRequestUtils.parseQueryString(decodeQueryString);
 				
@@ -141,22 +144,35 @@ public class RequestHandler extends Thread {
 	        	String email = pqs.get("email");
 	        	
 	        	User user = new User(userId, password, name, email);
-	        	System.out.println(user.toString());
+//	        	System.out.println(user.toString());
+	        	
+	        	response302Header(dos, "/index.html");
         	}
-        	System.out.println("----------------------------------------POST방식 회원가입 end----------------------------------------");
+//        	System.out.println("----------------------------------------POST방식 회원가입 end----------------------------------------");
         	
         	
         	System.out.println();
         	
-            DataOutputStream dos = new DataOutputStream(out);
+//            DataOutputStream dos = new DataOutputStream(out);
 //            byte[] body = "Hello World".getBytes();	// 구조상 재정의.
-            response200Header(dos, body.length);
+//            response200Header(dos, body.length);
             responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
-
+    
+    // "POST방식 회원가입"에서 사용	// 공부 필요
+    private void response302Header(DataOutputStream dos, String url) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
+            dos.writeBytes("Location: " + url + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+    
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
