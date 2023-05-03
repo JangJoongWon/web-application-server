@@ -15,6 +15,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import db.DataBase;
 import model.User;
 import util.HttpRequestUtils;
 import util.IOUtils;
@@ -64,7 +65,7 @@ public class RequestHandler extends Thread {
         		}
         		// "POST방식 회원가입"에 사용 end------------------------------------------
         		
-        		System.out.println(line);	// 실제로 출력을 한다.
+//        		System.out.println(line);	// 실제로 출력을 한다.
         		line = br.readLine();		// 수신 받은 데이터를 읽으며 커서를 옮기는 역할을 한다.
         	}
         	System.out.println("-------------------------------------HTTP 요청 정보 전체 출력 end---------------------------------------");
@@ -122,31 +123,56 @@ public class RequestHandler extends Thread {
         	
 //        	System.out.println("---------------------------------------POST방식 회원가입 start---------------------------------------");
         	if(method != null && method.equals("POST")) {
-        		// body 내용 읽기 1번 방법 start---------------------------------
-//        		String queryString = br.readLine();
-        		// 문제 발생......
-        		// body 내용 읽기 1번 방법 end-----------------------------------
-				
-        		// body 내용 읽기 2번 방법 start---------------------------------
-        		// readData는 read()를 사용한다. read()와 readLine()의 차이를 알 것.
-        		String queryString = IOUtils.readData(br, contentLength);
-				// body 내용 읽기 2번 방법 end-----------------------------------
-//        		System.out.println("queryString       :: " + queryString);
-				
-				String decodeQueryString = URLDecoder.decode(queryString, "UTF-8");
-//				System.out.println("decodeQueryString :: " + decodeQueryString);
-				
-				Map<String, String> pqs = HttpRequestUtils.parseQueryString(decodeQueryString);
-				
-				String userId = pqs.get("userId");
-	        	String password = pqs.get("password");
-	        	String name = pqs.get("name");
-	        	String email = pqs.get("email");
-	        	
-	        	User user = new User(userId, password, name, email);
-//	        	System.out.println(user.toString());
-	        	
-	        	response302Header(dos, "/index.html");
+        		if("/user/create".equals(url)) {	// "로그인 하기"를 하면서 if문을 '?'나 'method'가 아닌 'url'로 하는 것이 편함을 깨달음.
+					// body 내용 읽기 1번 방법 start---------------------------------
+//        			String queryString = br.readLine();
+					// 문제 발생......
+					// body 내용 읽기 1번 방법 end-----------------------------------
+
+					// body 내용 읽기 2번 방법 start---------------------------------
+					// readData는 read()를 사용한다. read()와 readLine()의 차이를 알 것.
+					String queryString = IOUtils.readData(br, contentLength);
+					// body 내용 읽기 2번 방법 end-----------------------------------
+//        			System.out.println("queryString       :: " + queryString);
+
+					String decodeQueryString = URLDecoder.decode(queryString, "UTF-8");
+//					System.out.println("decodeQueryString :: " + decodeQueryString);
+
+					Map<String, String> pqs = HttpRequestUtils.parseQueryString(decodeQueryString);
+
+					String userId = pqs.get("userId");
+					String password = pqs.get("password");
+					String name = pqs.get("name");
+					String email = pqs.get("email");
+
+					User user = new User(userId, password, name, email);
+//	        		System.out.println(user.toString());
+
+					DataBase.addUser(user);	// "로그인 하기"를 위해 회원정보 저장.
+					
+					response302Header(dos, "/index.html");
+        		}
+        		
+        		if("/user/login".equals(url)) {
+        			String strBody = IOUtils.readData(br, contentLength);
+        			Map<String, String> params = HttpRequestUtils.parseQueryString(strBody);
+        			User user = DataBase.findUserById(params.get("userId"));
+        			
+        			if(user == null) {
+        				body = Files.readAllBytes(new File("./webapp" + url).toPath());
+        				response200Header(dos, body.length);
+        				return;
+        			}
+        			
+        			if(user.getPassword().equals(params.get("password"))) {
+        				System.out.println("로그인 성공");
+        				response302LoginSuccessHeader(dos);
+        			} else {
+        				System.out.println("로그인 실패");
+        				body = Files.readAllBytes(new File("./webapp" + "/user/login_failed.html").toPath());
+        				response200Header(dos, body.length);
+        			}
+        		} 
         	}
 //        	System.out.println("----------------------------------------POST방식 회원가입 end----------------------------------------");
         	
@@ -157,6 +183,18 @@ public class RequestHandler extends Thread {
 //            byte[] body = "Hello World".getBytes();	// 구조상 재정의.
 //            response200Header(dos, body.length);
             responseBody(dos, body);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+    
+    // "로그인 하기"에서 사용
+    private void response302LoginSuccessHeader(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
+            dos.writeBytes("Set-Cookie: logined=true \r\n");
+            dos.writeBytes("Location: /index.html \r\n");
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
