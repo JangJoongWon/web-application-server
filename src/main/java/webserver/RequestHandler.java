@@ -65,7 +65,7 @@ public class RequestHandler extends Thread {
         		}
         		// "POST방식 회원가입"에 사용 end------------------------------------------
         		
-//        		System.out.println(line);	// 실제로 출력을 한다.
+        		System.out.println(line);	// 실제로 출력을 한다.
         		line = br.readLine();		// 수신 받은 데이터를 읽으며 커서를 옮기는 역할을 한다.
         	}
         	System.out.println("-------------------------------------HTTP 요청 정보 전체 출력 end---------------------------------------");
@@ -91,9 +91,14 @@ public class RequestHandler extends Thread {
         	// if문 2번째 방법 end----------------------------------------------------------
         	
         	// if문 3번째 방법 start--------------------------------------------------------
-	        if(!url.contains("?") && (method != null && !method.equals("POST"))) {
-	        	body = Files.readAllBytes(new File("./webapp" + url).toPath());
-	        	response200Header(dos, body.length);	// "POST방식 회원가입"에서 response302Header를 사용하면서 옮김.
+	        if(!url.contains("?") && (method != null && method.equals("GET"))) {
+	        	if("/user/list.html".equals(url)) {
+	        		body = Files.readAllBytes(new File("./webapp" + url).toPath());
+		        	response200Header(dos, body.length);
+	        	} else {
+		        	body = Files.readAllBytes(new File("./webapp" + url).toPath());
+		        	response200Header(dos, body.length);	// "POST방식 회원가입"에서 response302Header를 사용하면서 옮김.
+	        	}
         	}
         	// if문 3번째 방법 end----------------------------------------------------------
 //        	System.out.println("---------------------------------------index.html로 이동 end---------------------------------------");
@@ -121,8 +126,8 @@ public class RequestHandler extends Thread {
 //        	System.out.println("----------------------------------------GET방식 회원가입 end----------------------------------------");
         	
         	
-//        	System.out.println("---------------------------------------POST방식 회원가입 start---------------------------------------");
         	if(method != null && method.equals("POST")) {
+//            	System.out.println("---------------------------------------POST방식 회원가입 start---------------------------------------");
         		if("/user/create".equals(url)) {	// "로그인 하기"를 하면서 if문을 '?'나 'method'가 아닌 'url'로 하는 것이 편함을 깨달음.
 					// body 내용 읽기 1번 방법 start---------------------------------
 //        			String queryString = br.readLine();
@@ -152,7 +157,9 @@ public class RequestHandler extends Thread {
 					
 					response302Header(dos, "/index.html");
         		}
+//            	System.out.println("----------------------------------------POST방식 회원가입 end----------------------------------------");
         		
+//        		System.out.println("-----------------------------------------로그인 하기 start-----------------------------------------");
         		if("/user/login".equals(url)) {
         			String strBody = IOUtils.readData(br, contentLength);
         			Map<String, String> params = HttpRequestUtils.parseQueryString(strBody);
@@ -173,8 +180,9 @@ public class RequestHandler extends Thread {
         				response200Header(dos, body.length);
         			}
         		} 
+//        		System.out.println("------------------------------------------로그인 하기 end------------------------------------------");
         	}
-//        	System.out.println("----------------------------------------POST방식 회원가입 end----------------------------------------");
+
         	
         	
         	System.out.println();
@@ -200,6 +208,7 @@ public class RequestHandler extends Thread {
         }
     }
     
+    // ----------------------------302 status code 적용 start----------------------------
     // "POST방식 회원가입"에서 사용	// 공부 필요
     private void response302Header(DataOutputStream dos, String url) {
         try {
@@ -210,6 +219,7 @@ public class RequestHandler extends Thread {
             log.error(e.getMessage());
         }
     }
+    //------------------------------302 status code 적용 end------------------------------
     
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
